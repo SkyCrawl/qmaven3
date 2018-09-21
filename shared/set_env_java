@@ -1,0 +1,117 @@
+#!/bin/bash
+
+# TODO - options:
+# 1) -q <name> ... the target QPKG name (if not recognized, an error is thrown)
+# 2) -p <path> ... force the given path (no error, even if not recognized)
+
+#
+# COMMON PREREQUISITES
+#
+
+# vital variables for the function of this script
+QPKG_CONF="/etc/config/qpkg.conf"
+QPKG_NAME="QMaven3"
+QPKG_INSTALL_PATH=$(/sbin/getcfg $QPKG_NAME Install_Path -f $QPKG_CONF)
+
+# configuration files
+QMVN_SUPPORTED_FILE="$QPKG_INSTALL_PATH/../.maven/java_supported"
+
+# determine the supported Java-supplying QPKG names (in their preferred order)
+SUPPORTED=$(/bin/bash "$QMVN_SUPPORTED_FILE")
+
+#
+# DECLARED FUNCTIONS
+#
+
+usage(){
+	echo ""
+	echo "  Usage:"
+	echo "    $0"
+	echo "    $0 <QPKG-NAME>"
+	echo ""
+	echo "  This script alters the current session and sets Java environment to match the QPKG"
+	echo "  name given as 1st parameter. If no name is specified and Java environment is not"
+	echo "  yet defined, the following file (user-preferred order):"
+	echo "    $QMVN_SUPPORTED_FILE"
+	echo "  is used to determine the default and set the environment."
+	echo ""
+	echo "  Names are NOT case sensitive and right now, the following are explicitly supported:"
+	
+	# sort the supported Java-supplying QPKG names
+	IFS=$'\n' SUPPORTED_SORTED=($(sort <<<"${SUPPORTED[*]}"))
+	unset IFS
+	
+	# and print them
+	for NAME in "${SUPPORTED_SORTED[@]}" do
+		echo "    - $NAME"
+	done
+	echo ""
+}
+
+do_set(){
+	# determine JAVA_HOME and JRE_HOME
+	if [[ ! "${$1,,}" = "jre" ]]; then
+		# assume QPKGs from QNAP Store (author: Optimus)
+		NEW_JAVA_HOME="/usr/local/jre"   # TODO: strictly speaking, this is wrong
+		NEW_JRE_HOME="/usr/local/jre"    # and this is why :)
+	else
+		# assume QPKGs from QNAP Club (manager: Qoolbox; author: Guerithault Stephane)
+		INSTALL_PATH="$(/sbin/getcfg ${$1^^} Install_Path -f $QPKG_CONF)"
+		NEW_JAVA_HOME="$INSTALL_PATH"
+		NEW_JRE_HOME="$INSTALL_PATH/jre"
+	fi
+	
+	# DO set the environment
+	echo "  Setting Java environment variables..."
+	echo "  --- Target QPKG: ${$1^^}"
+	export JAVA_HOME="$NEW_JAVA_HOME"
+	echo "  --- JAVA_HOME: $JAVA_HOME"
+	export JDK_HOME="$JAVA_HOME"
+	echo "  --- JDK_HOME: $JDK_HOME"
+	export JRE_HOME="$NEW_JRE_HOME"
+	echo "  --- JRE_HOME: $JRE_HOME"
+	export CLASSPATH="$JAVA_HOME/lib:$JRE_HOME/lib"
+	echo "  --- CLASSPATH: $CLASSPATH"
+	export PATH="$PATH:$JAVA_HOME/bin"
+	echo "  --- New PATH: $PATH"
+}
+
+#
+# DECISION MAKING
+#
+
+# create an alias to the input parameter
+TARGET_NAME="$1"
+
+# branch depending on whether a target QPKG is defined, and whether it matches one of the supported names (ignoring case)
+if [ -z "$TARGET_NAME" ]; then
+	# check whether environment is already defined
+	if [ ! -z "$JAVA_HOME" ]; then
+		echo "  Warning: no action. JAVA_HOME is already set to: $JAVA_HOME."
+		echo ""
+		exit 1
+	fi
+	
+	# determine the first installed Java-related QPKG and set JAVA_HOME
+	for NAME in "${SUPPORTED[@]}" do
+		NAME_INSTALL_PATH="$(/sbin/getcfg $NAME Install_Path -f $QPKG_CONF)"
+		if [ ! -z "$NAME_INSTALL_PATH" ]; then
+			do_set "$NAME"
+			exit 0
+		fi
+	done
+	
+	# self-explanatory
+	echo "  Error: at least one of the supported QPKGs has to be installed first."
+	usage
+	exit 1
+elif [[ ! "${SUPPORTED[@],,}" =~ "${$TARGET_NAME,,}" ]]; then
+	# self-explanatory
+	echo "  Error: '$TARGET_NAME' does not match any of the supported QPKG names."
+	usage
+	exit 2
+else
+	# self-explanatory
+	do_set "$TARGET_NAME"
+	exit 0
+fi

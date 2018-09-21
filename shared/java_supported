@@ -1,0 +1,8 @@
+#!/bin/bash
+
+#
+# Returns: user-preferred order of all the supported Java-supplying QPKG names.
+# Purpose: the first installed QPKG from this list will be used as environment default.
+#
+
+echo "QJDK8 JRE QJDK7 QJDK9 QJDK10"
