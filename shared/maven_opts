@@ -1,0 +1,10 @@
+#!/bin/bash
+
+#
+# Maven Opts (parameters used to startup the JVM running Maven)
+#
+# Explanation of defaults:
+# - https://stackoverflow.com/a/50924208
+#
+
+export MAVEN_OPTS="-Xms256m -Xmx512m -Dhttps.protocols=TLSv1.2"

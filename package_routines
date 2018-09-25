@@ -110,7 +110,6 @@
 ######################################################################
 
 ## Declare dependencies.
-JRE_NAME="JRE"
 QJDK7_NAME="QJDK7"
 QJDK8_NAME="QJDK8"
 QJDK9_NAME="QJDK9"
@@ -198,21 +197,49 @@ pkg_init()
 pkg_check_requirement()
 {
 	# the same requirement is specified in 'qpkg.cfg' but it doesn't hurt to really make sure
-	JRE_PATH="$($CMD_GETCFG $JRE_NAME $SYS_QPKG_CONF_FIELD_INSTALL_PATH -f $SYS_QPKG_CONFIG_FILE)"
 	QJDK7_PATH="$($CMD_GETCFG $QJDK7_NAME $SYS_QPKG_CONF_FIELD_INSTALL_PATH -f $SYS_QPKG_CONFIG_FILE)"
 	QJDK8_PATH="$($CMD_GETCFG $QJDK8_NAME $SYS_QPKG_CONF_FIELD_INSTALL_PATH -f $SYS_QPKG_CONFIG_FILE)"
 	QJDK9_PATH="$($CMD_GETCFG $QJDK9_NAME $SYS_QPKG_CONF_FIELD_INSTALL_PATH -f $SYS_QPKG_CONFIG_FILE)"
 	QJDK10_PATH="$($CMD_GETCFG $QJDK10_NAME $SYS_QPKG_CONF_FIELD_INSTALL_PATH -f $SYS_QPKG_CONFIG_FILE)"
-	if [[ -z "$JRE_PATH" && -z "$QJDK7_PATH" && -z "$QJDK8_PATH" && -z "$QJDK9_PATH" && -z "$QJDK10_PATH" ]]; then
-		err_log "Neither of JRE or QJDK 7/8/9/10 is installed. See 'https://www.qnapclub.eu/en'."
+	if [[ -z "$QJDK7_PATH" && -z "$QJDK8_PATH" && -z "$QJDK9_PATH" && -z "$QJDK10_PATH" ]]; then
+		my_exit "Neither of QJDK 7/8/9/10 is installed. See 'https://www.qnapclub.eu/en'."
 	else
-		$CMD_ECHO -e "--- JRE or QJDK 7/8/9/10... found"
+		$CMD_ECHO -e "--- QJDK 7/8/9/10... found"
     fi
 }
 
 ######################################################################
 # OUR INSTALLATION
 ######################################################################
+
+handle_config_files()
+{
+	# split into path and filename
+	DIR="$(/usr/bin/dirname $1)"
+	BASE="$(/usr/bin/basename $1)"
+	
+	# backup or replace any previous config file
+	CNF_CHKSM="$DIR/checksums/$BASE.checksum"
+	$CMD_MKDIR -p "$DIR/checksums"
+	
+	if [ -f "$1" ]; then
+		CNF_CHKSM_OLD=$($CMD_CAT "$CNF_CHKSM")
+		CNF_CHKSM_NOW=$($CMD_MD5SUM "$1" | /bin/dd count=32 bs=1 2>/dev/null)
+		if [[ ! -f "$CNF_CHKSM" || $CNF_CHKSM_OLD != $CNF_CHKSM_NOW ]]; then
+			# if manual modifications were made or we don't have a way to compare, backup the old configuration file
+			RAND_SEQ=$(/usr/bin/openssl rand -hex 4)
+			$CMD_MV "$1" "$1.$RAND_SEQ"
+			$CMD_ECHO true
+		else
+			# if no manual modifications were made, replace the old configuration file
+			$CMD_RM "$1"
+		fi
+	fi
+	$CMD_MV "$2" "$1"
+	
+	# refresh checksum
+	$CMD_MD5SUM "$1" | /bin/dd count=32 bs=1 2>/dev/null > "$CNF_CHKSM"
+}
 
 # NOTES:
 # - "$SYS_QPKG_DIR" has just been created if we're not upgrading
@@ -236,39 +263,33 @@ pkg_install()
 	
 	cd "$SYS_QPKG_DIR"
 	
+	$CMD_ECHO -e "[Installing...]"
+	
 	# declare the persistent directory
 	# WARNING: stupid & buggy QDK doesn't set the 'SYS_QPKG_BASE' variable...
-	$CMD_ECHO -e "--- Initializing the persistent folder..."
+	$CMD_ECHO -e "--- Configuration files..."
 	MVN_DATA_FOLDER="$SYS_QPKG_INSTALL_PATH/.maven"
 	if [ ! -d "$MVN_DATA_FOLDER" ]; then
 		$CMD_MKDIR "$MVN_DATA_FOLDER"
 	fi
 	
 	# keep the previous configuration files (if any) and copy the new
-	MVN_JAVA_SUPPORTED="$MVN_DATA_FOLDER/java_supported"
-	if [ -f "$MVN_JAVA_SUPPORTED" ]; then
-		RAND_SEQ=$(openssl rand -hex 4)
-		$CMD_MV "$MVN_JAVA_SUPPORTED" "$MVN_JAVA_SUPPORTED.$RAND_SEQ"
+	CNF1=$(handle_config_files "$MVN_DATA_FOLDER/supported_java" "./supported_java")
+	CNF2=$(handle_config_files "$MVN_DATA_FOLDER/maven_opts" "./maven_opts")
+	CNF3=$(handle_config_files "$MVN_DATA_FOLDER/settings.xml" "./settings.xml")
+	if [[ $CNF1 = true || $CNF2 = true || $CNF3 = true ]]; then
+		# if user HAS made modifications to the configuration file
+		warn_log "QMaven3: Some manual actions are needed. Please read 'https://github.com/SkyCrawl/qmaven3/tree/3.5.4-1#upgrading'."
 	fi
-	$CMD_MV "./java_supported" "$MVN_JAVA_SUPPORTED"
-	
-	MVN_OPTS="$MVN_DATA_FOLDER/mvn_opts"
-	if [ -f "$MVN_OPTS" ]; then
-		RAND_SEQ=$(openssl rand -hex 4)
-		$CMD_MV "$MVN_OPTS" "$MVN_OPTS.$RAND_SEQ"
-	fi
-	$CMD_MV "./mvn_opts" "$MVN_OPTS"
-	
-	# TODO: a warning for the user?
-	
-	$CMD_ECHO -e "--- Creating symlinks to environment scripts..."
-	$CMD_LN -s ./set_env_java /usr/local/bin/set_env_java
-	$CMD_LN -s ./set_env_mvn /usr/local/bin/set_env_mvn
 	
 	# extract and install the bundled distribution
-	$CMD_ECHO -e "\n[Extracting the tarball...]"
+	$CMD_ECHO -e "\n[Distribution...]"
 	$CMD_TAR -xvf "lib/apache-maven-3.5.4-bin.tar.gz"
 	$CMD_MV "apache-maven-3.5.4" "mvn-3.5.4"
+	
+	# symlink the global settings file from within MAVEN_HOME
+	$CMD_MKDIR -p "./mvn-3.5.4/conf"
+	$CMD_LN -sf "$MVN_DATA_FOLDER/settings.xml" "./mvn-3.5.4/conf/settings.xml"
 	
 	# cleanup
 	$CMD_RM -rf "lib"
@@ -302,8 +323,8 @@ pkg_post_install()
 # }"
 # PKG_MAIN_REMOVE="
 # {
-    # remove system-wide configuration file
-    # $CMD_RM -f $QPKG_CONFIG
+#    # remove the generated configuration file
+#    \$CMD_RM ~/settings.xml
 # }"
 # PKG_POST_REMOVE="
 # {

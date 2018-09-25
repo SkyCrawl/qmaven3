@@ -234,4 +234,4 @@ USAGE
 #	'${QPKG_NAME}_gray.gif' (64x64) - QPKG is disabled.
 
 
-qbuild --strict --verbose --exclude ".git" --exclude ".gitignore" --exclude ".gitkeep" --exclude ".DS_Store" --exclude "icons/QMaven.pxm" --exclude "icons/source-image.png"
+qbuild --strict --verbose --exclude ".git" --exclude ".gitignore" --exclude ".gitkeep" --exclude ".DS_Store" --exclude "icons/QMaven3.pxm" --exclude "icons/source-image.png"

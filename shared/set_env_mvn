@@ -3,35 +3,33 @@
 # vital variables for the function of this script
 QPKG_CONF="/etc/config/qpkg.conf"
 QPKG_NAME="QMaven3"
-QPKG_ROOT="$(/sbin/getcfg $QPKG_NAME Install_Path -f $QPKG_CONF)"
+QPKG_ROOT=$(/sbin/getcfg $QPKG_NAME Install_Path -f $QPKG_CONF)
 
-# declare data folders and files
-MVN_DATA_FOLDER="$QPKG_ROOT/../.maven"
-MVN_DATA_MO="$MVN_DATA_FOLDER/set_env_mvn"
+#
+# Maven Home Folder
+#
 
-$CMD_TOUCH "$MVN_DATA_MO"
-		$CMD_ECHO -e "# export MAVEN_OPTS=" >> "$MVN_DATA_MO"
+# some programs MAY still reference:
+export MAVEN_HOME="$QPKG_ROOT/mvn-3.5.4"
 
-# declare files within the persistent directory
-	# TODO:
-	MVN_DATA_MO="$MVN_DATA_FOLDER/set_env_mvn"
+# nowadays, documentation ONLY mentions:
+export M2_HOME="$MAVEN_HOME"
 
-# setup Maven environment
-echo "--- Setting up PATH..."
-export PATH="$QPKG_ROOT/dist/bin:$PATH"
-if [ -f "$MVN_DATA_JH" ]; then
-	echo "--- Setting up JAVA_HOME (user preference)..."
-	/bin/sh "$MVN_DATA_JH"
+# and what is this?
+export M2="$M2_HOME/bin"
+
+#
+# PATH
+#
+
+# but only if the entry is not present yet
+if [ -z "$(/bin/echo $PATH | /bin/grep mvn-3.5.4)" ]; then
+	# export PATH=$(/bin/echo ${PATH} | /bin/awk -v RS=: -v ORS=: "/mvn-3.5.4/ {next} {print}" | /bin/sed 's/:*$//')
+	export PATH="$PATH:$M2"
 fi
 
-if [ -f "$MVN_DATA_MO" ]; then
-	echo "--- Setting up MAVEN_OPTS (user preference)..."
-	/bin/sh "$MVN_DATA_MO"
-fi
+#
+# Maven Opts
+#
 
-# and finish up
-echo "Success!"
-exit 0
-
-# Run "mvn --version" to verify that it is correctly installed.
-# Confirm with mvn -v in a new shell
+source "$QPKG_ROOT/../.maven/maven_opts"

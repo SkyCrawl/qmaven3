@@ -5,4 +5,4 @@
 # Purpose: the first installed QPKG from this list will be used as environment default.
 #
 
-echo "QJDK8 JRE QJDK7 QJDK9 QJDK10"
+echo "QJDK8 QJDK7 QJDK9 QJDK10"
