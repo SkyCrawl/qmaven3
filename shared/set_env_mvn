@@ -32,4 +32,4 @@ fi
 # Maven Opts
 #
 
-source "$QPKG_ROOT/../.maven/maven_opts"
+source "$QPKG_ROOT/../../.maven/maven_opts"

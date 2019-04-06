@@ -20,13 +20,15 @@ QPKG_NAME="QMaven3"
 QPKG_INSTALL_PATH="$(/sbin/getcfg $QPKG_NAME Install_Path -f $QPKG_CONF)"
 
 # configuration files
-QMVN_SUPPORTED_FILE="$QPKG_INSTALL_PATH/../.maven/supported_java"
+QMVN_SUPPORTED_FILE="$QPKG_INSTALL_PATH/../../.maven/supported_java"
 if [ ! -f "$QMVN_SUPPORTED_FILE" ]; then
 	/bin/echo ""
 	/bin/echo "  Error: the following required file doesn't exist."
 	/bin/echo "    $QMVN_SUPPORTED_FILE"
 	/bin/echo ""
-	return
+	# https://stackoverflow.com/a/52012684
+	return 2 2>/dev/null
+	exit 2
 fi
 
 # determine the supported Java-supplying QPKG names (in their preferred order)
@@ -52,11 +54,10 @@ usage(){
 	/bin/echo "  If the input parameter is NOT specified, environment is set to first installed"
 	/bin/echo "  QPKG that is also specified in the following file (user-preferred order):"
 	/bin/echo "    $QMVN_SUPPORTED_FILE"
-	/bin/echo "  Use this option to restore your default Java environment."
+	/bin/echo "  Ergo, don't specify any JDK if you'd like to restore your default environment."
 	/bin/echo ""
-	/bin/echo "  If no QPKG from the above file is installed, environment is NOT set. No other"
-	/bin/echo "  side effect."
-	/bin/echo "  script will print an error."
+	/bin/echo "  If no QPKG from the above file is installed, environment is NOT set and this "
+	/bin/echo "  script will print an error. There is no side effect."
 	/bin/echo ""
 	/bin/echo "  QPKG names are NOT case sensitive and right now, the following are explicitly"
 	/bin/echo "  supported:"
@@ -69,6 +70,11 @@ usage(){
 	for NAME in "${SUPPORTED_SORTED[@]}"; do
 		/bin/echo "    - $NAME"
 	done
+	
+	/bin/echo ""
+	/bin/echo "  Should you wish to return to using the JRE package, you must disable or remove"
+	/bin/echo "  QMaven3 in App Center. While presence of the JRE package is tolerated by QMaven3,"
+	/bin/echo "  they are not compatible."
 	/bin/echo ""
 }
 
@@ -82,9 +88,10 @@ do_unset(){
 # set Java environment to the given Java QPKG (expected to be in upper-case!)
 do_set(){
 	# assume QPKGs from QNAP Club (manager: Qoolbox; author: Guerithault Stephane)
+	# Note: all of them are JDKs (supersets of JREs)
 	INSTALL_PATH="$(/sbin/getcfg $1 Install_Path -f $QPKG_CONF)"
 	NEW_JAVA_HOME="$INSTALL_PATH"
-	NEW_JRE_HOME="$INSTALL_PATH/jre"
+	NEW_JRE_HOME="$INSTALL_PATH"
 	
 	# DO set the environment
 	if [ $VERBOSE = true ]; then
@@ -94,6 +101,7 @@ do_set(){
 	fi
 	export JAVA_HOME="$NEW_JAVA_HOME"
 	if [ $VERBOSE = true ]; then
+		# this is always the case
 		/bin/echo "  --- JAVA_HOME: $JAVA_HOME"
 	fi
 	export JDK_HOME="$JAVA_HOME"
@@ -104,7 +112,7 @@ do_set(){
 	if [ $VERBOSE = true ]; then
 		/bin/echo "  --- JRE_HOME: $JRE_HOME"
 	fi
-	export CLASSPATH="$JAVA_HOME/lib:$JRE_HOME/lib"
+	export CLASSPATH="$JAVA_HOME/lib"
 	if [ $VERBOSE = true ]; then
 		/bin/echo "  --- CLASSPATH: $CLASSPATH"
 	fi
@@ -125,14 +133,17 @@ do_set(){
 #	- Consume one arg per pass: -gt 0
 #	- Consume two args per pass: -gt 1
 VERBOSE=false
+TARGET="" # unset (in case of repeated usage)
 while [[ $# -gt 0 ]]
 do
 	# get and handle the current option
 	opt="$1"
 	case $opt in
-    	-h|--help)
+		-h|--help)
 			usage
-			return
+			# https://stackoverflow.com/a/52012684
+			return 0 2>/dev/null
+			exit 0
 			;;
 		-v|--verbose)
 			VERBOSE=true
@@ -157,7 +168,9 @@ if [ -z "$TARGET" ]; then
 		if [ ! -z "$TARGET_INSTALL_PATH" ]; then
 			do_unset
 			do_set "$TARGET"
-			return
+			# https://stackoverflow.com/a/52012684
+			return 0 2>/dev/null
+			exit 0
 		fi
 	done
 	

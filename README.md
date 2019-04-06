@@ -1,6 +1,6 @@
 # QMaven3
 
-Provides automatic, smart and convenient installation of [Maven 3](https://maven.apache.org/index.html) for owners of QNAP devices. The main problem to solve was Maven's dependency on Java, because there are several Java QPKGs available. All of QJDK7 to QJDK10 are supported. The JRE package is NOT supported because it isn't compatible with Maven (it only contains JRE, not a JDK). However, it is tolerated if installed because some packages (e.g. Qsirch) may require it.
+Provides automatic, smart and convenient installation of [Maven 3](https://maven.apache.org/index.html) for owners of QNAP devices. The main problem to solve was Maven's dependency on Java, because there are several Java QPKGs available. All of QJDK7 to QJDK11 are supported. The JRE package is NOT supported because it isn't compatible with Maven (it only contains JRE, not a JDK). However, it is tolerated if installed because some packages (e.g. Qsirch) may require it.
 
 Features:
 * Automatic detection and handling of Java dependency.
@@ -83,11 +83,11 @@ source set_env_java QJDK8
 
 ### FAQ #4: new Java QPKG
 
-If there's a new Java QPKG (e.g. `QJDK11`) not yet supported by QMaven and you want to try manually adding support for it:
+If there's a new Java QPKG (e.g. `QJDK12`) not yet supported by QMaven and you want to try manually adding support for it:
 1. Open `<data-folder>/supported_java` in a text editor.
-2. Add `QJDK11` into the list and save.
+2. Add `QJDK12` into the list and save.
 
-__However, this will only work when the QPKG's install path directly contains the Java distribution. This is the case for all of QJDK7 to QJDK10 available via QNAP Club and it should be safe to assume the same for future editions.__
+__However, this will only work when the QPKG's install path directly contains the Java distribution. This is the case for all of QJDK7 to QJDK11 available via QNAP Club and it should be safe to assume the same for future editions.__
 
 ### FAQ #5: environment configuration (Maven or Java)
 

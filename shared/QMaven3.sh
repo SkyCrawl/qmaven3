@@ -16,6 +16,8 @@ case "$1" in
 		elif [ "$QPKG_ENABLED" != "TRUE" ]; then
 			# disabled QPKG has no right to start...
 			echo "$QPKG_NAME is disabled."
+			# https://stackoverflow.com/a/52012684
+			return 1 2>/dev/null
 			exit 1
 		fi
 		
@@ -90,8 +92,12 @@ case "$1" in
 
 	*)
 		echo "Usage: $0 {start|stop|restart|test}"
+		# https://stackoverflow.com/a/52012684
+		return 1 2>/dev/null
 		exit 1
 esac
 
 # if everything goes well...
+# https://stackoverflow.com/a/52012684
+return 0 2>/dev/null
 exit 0

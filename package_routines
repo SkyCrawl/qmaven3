@@ -114,6 +114,7 @@ QJDK7_NAME="QJDK7"
 QJDK8_NAME="QJDK8"
 QJDK9_NAME="QJDK9"
 QJDK10_NAME="QJDK10"
+QJDK11_NAME="QJDK11"
 
 ## Installation log file.
 QPKG_LOG_FILE="/var/log/maven-install-tmp.log"
@@ -201,10 +202,11 @@ pkg_check_requirement()
 	QJDK8_PATH="$($CMD_GETCFG $QJDK8_NAME $SYS_QPKG_CONF_FIELD_INSTALL_PATH -f $SYS_QPKG_CONFIG_FILE)"
 	QJDK9_PATH="$($CMD_GETCFG $QJDK9_NAME $SYS_QPKG_CONF_FIELD_INSTALL_PATH -f $SYS_QPKG_CONFIG_FILE)"
 	QJDK10_PATH="$($CMD_GETCFG $QJDK10_NAME $SYS_QPKG_CONF_FIELD_INSTALL_PATH -f $SYS_QPKG_CONFIG_FILE)"
-	if [[ -z "$QJDK7_PATH" && -z "$QJDK8_PATH" && -z "$QJDK9_PATH" && -z "$QJDK10_PATH" ]]; then
-		my_exit "Neither of QJDK 7/8/9/10 is installed. See 'https://www.qnapclub.eu/en'."
+	QJDK11_PATH="$($CMD_GETCFG $QJDK11_NAME $SYS_QPKG_CONF_FIELD_INSTALL_PATH -f $SYS_QPKG_CONFIG_FILE)"
+	if [[ -z "$QJDK7_PATH" && -z "$QJDK8_PATH" && -z "$QJDK9_PATH" && -z "$QJDK10_PATH" && -z "$QJDK11_PATH" ]]; then
+		my_exit "Neither of QJDK 7/8/9/10/11 is installed. See 'https://www.qnapclub.eu/en'."
 	else
-		$CMD_ECHO -e "--- QJDK 7/8/9/10... found"
+		$CMD_ECHO -e "--- QJDK 7/8/9/10/11... found"
     fi
 }
 
@@ -268,12 +270,17 @@ pkg_install()
 	# declare the persistent directory
 	# WARNING: stupid & buggy QDK doesn't set the 'SYS_QPKG_BASE' variable...
 	$CMD_ECHO -e "--- Configuration files..."
-	MVN_DATA_FOLDER="$SYS_QPKG_INSTALL_PATH/.maven"
+	MVN_DATA_FOLDER="$SYS_QPKG_INSTALL_PATH/../.maven"
+	# if we're upgrading, try to move configuration files first
+	if [ ! -z "$IS_UPGRADE" ]; then
+		# transition from version 3.5.4-1 to 3.5.4.2
+		mv "$SYS_QPKG_INSTALL_PATH/.maven" "$MVN_DATA_FOLDER" 2>/dev/null
+	fi
+	# if it doesn't exist yet, create directory for the configuration files
 	if [ ! -d "$MVN_DATA_FOLDER" ]; then
 		$CMD_MKDIR "$MVN_DATA_FOLDER"
 	fi
-	
-	# keep the previous configuration files (if any) and copy the new
+	# if configuration files already exist, keep previous versions and install new
 	CNF1=$(handle_config_files "$MVN_DATA_FOLDER/supported_java" "./supported_java")
 	CNF2=$(handle_config_files "$MVN_DATA_FOLDER/maven_opts" "./maven_opts")
 	CNF3=$(handle_config_files "$MVN_DATA_FOLDER/settings.xml" "./settings.xml")
